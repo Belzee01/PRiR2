@@ -10,133 +10,133 @@ import java.util.stream.IntStream;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class PMO_Test {
-	//////////////////////////////////////////////////////////////////////////
-	private static final Map<String, Double> tariff = new HashMap<>();
+    //////////////////////////////////////////////////////////////////////////
+    private static final Map<String, Double> tariff = new HashMap<>();
 
-	@Retention(RetentionPolicy.RUNTIME)
-	public static @interface Tariff {
-		double value();
-	}
+    @Retention(RetentionPolicy.RUNTIME)
+    public static @interface Tariff {
+        double value();
+    }
 
-	static {
-		tariff.put("initalStateTest", 3.0);
-		tariff.put("terminationTest", 3.0);
-		tariff.put("suspensionTest",3.0);
-	}
+    static {
+        tariff.put("initalStateTest", 3.0);
+        tariff.put("terminationTest", 3.0);
+        tariff.put("suspensionTest", 3.0);
+    }
 
-	public static double getTariff(String testName) {
-		return tariff.get(testName);
-	}
+    public static double getTariff(String testName) {
+        return tariff.get(testName);
+    }
 
-	private ParallelCalculationsInterface pci;
-	private ThreadControllInterface tci;
-	private Thread threads[];
-	private Thread.State states[];
-	private boolean threadsStated;
+    private ParallelCalculationsInterface pci;
+    private ThreadControllInterface tci;
+    private Thread threads[];
+    private Thread.State states[];
+    private boolean threadsStated;
 
-	//////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////
 
-	private static void showException(Throwable e, String txt) {
-		e.printStackTrace();
-		fail("W trakcie pracy metody " + txt + " doszło do wyjątku " + e.toString());
-	}
+    private static void showException(Throwable e, String txt) {
+        e.printStackTrace();
+        fail("W trakcie pracy metody " + txt + " doszło do wyjątku " + e.toString());
+    }
 
-	////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////
 
-	private static <T> T tryToExecute(ThrowingSupplier<T> run, String txt, long timeLimit) {
-		try {
-			return assertTimeoutPreemptively(Duration.ofMillis(timeLimit), run::get, "Przekroczono limit czasu " + txt);
-		} catch (Exception e) {
-			showException(e, txt);
-		}
-		return null;
-	}
+    private static <T> T tryToExecute(ThrowingSupplier<T> run, String txt, long timeLimit) {
+        try {
+            return assertTimeoutPreemptively(Duration.ofMillis(timeLimit), run::get, "Przekroczono limit czasu " + txt);
+        } catch (Exception e) {
+            showException(e, txt);
+        }
+        return null;
+    }
 
-	private static void tryToExecute(Runnable run, String txt, long timeLimit) {
-		try {
-			assertTimeoutPreemptively(Duration.ofMillis(timeLimit), run::run, "Przekroczono limit czasu " + txt);
-		} catch (Exception e) {
-			showException(e, txt);
-		}
-	}
+    private static void tryToExecute(Runnable run, String txt, long timeLimit) {
+        try {
+            assertTimeoutPreemptively(Duration.ofMillis(timeLimit), run::run, "Przekroczono limit czasu " + txt);
+        } catch (Exception e) {
+            showException(e, txt);
+        }
+    }
 
-	@BeforeEach
-	public void create() {
-		Object o = PMO_InstanceHelper.fabric("ParallelCalculations", "ParallelCalculationsInterface");
+    @BeforeEach
+    public void create() {
+        Object o = PMO_InstanceHelper.fabric("ParallelCalculations", "ParallelCalculationsInterface");
 
-		try {
-			pci = (ParallelCalculationsInterface) o;
-		} catch (Exception e) {
-			fail("Klasa ParallelCalculations nie wspiera interfejsu ParallelCalculationsInterface");
-		}
-		try {
-			tci = (ThreadControllInterface) o;
-		} catch (Exception e) {
-			fail("Klasa ParallelCalculations nie wspiera interfejsu ParallelCalculationsInterface");
-		}
-	}
-	
-	@AfterEach
-	public void shutdown() {
-		if ( threadsStated ) {
-			tci.terminate();
-		}
-	}
+        try {
+            pci = (ParallelCalculationsInterface) o;
+        } catch (Exception e) {
+            fail("Klasa ParallelCalculations nie wspiera interfejsu ParallelCalculationsInterface");
+        }
+        try {
+            tci = (ThreadControllInterface) o;
+        } catch (Exception e) {
+            fail("Klasa ParallelCalculations nie wspiera interfejsu ParallelCalculationsInterface");
+        }
+    }
 
-	private void getThreads(int numberOfThreads) {
-		threads = new Thread[numberOfThreads];
-		states = new Thread.State[numberOfThreads];
-		IntStream.range(0, numberOfThreads).forEach(i -> threads[i] = tci.getThread(i));
-		if (Arrays.stream(threads).anyMatch(th -> th == null)) {
-			fail("Metoda getThread zwróciła null");
-		}
-	}
+    @AfterEach
+    public void shutdown() {
+        if (threadsStated) {
+            tci.terminate();
+        }
+    }
 
-	private void prepare(int threads, PointGeneratorInterface generator) {
-		tci.setNumberOfThreads(threads);
-		pci.setPointGenerator(generator);
-		tci.createThreads();
-		getThreads(threads);
-	}
+    private void getThreads(int numberOfThreads) {
+        threads = new Thread[numberOfThreads];
+        states = new Thread.State[numberOfThreads];
+        IntStream.range(0, numberOfThreads).forEach(i -> threads[i] = tci.getThread(i));
+        if (Arrays.stream(threads).anyMatch(th -> th == null)) {
+            fail("Metoda getThread zwróciła null");
+        }
+    }
 
-	private void getStates() {
-		for (int i = 0; i < threads.length; i++) {
-			states[i] = threads[i].getState();
-		}
-	}
+    private void prepare(int threads, PointGeneratorInterface generator) {
+        tci.setNumberOfThreads(threads);
+        pci.setPointGenerator(generator);
+        tci.createThreads();
+        getThreads(threads);
+    }
 
-	private void testStates(String txt, Thread.State expectedState) {
-		for (int i = 0; i < states.length; i++) {
-			if (states[i] != expectedState) {
-				fail(txt + expectedState.toString() + " a jest " + states[ i ].toString() );
-			}
-		}
-	}
+    private void getStates() {
+        for (int i = 0; i < threads.length; i++) {
+            states[i] = threads[i].getState();
+        }
+    }
 
-	@Test
-	public void initalStateTest() {
-		prepare(4, new PMO_SimpleGenerator(new PointGeneratorInterface.Point2D(1, 1)));
-		getStates();
-		testStates("Po createThreads oczekiwano ", Thread.State.NEW);
-	}
+    private void testStates(String txt, Thread.State expectedState) {
+        for (int i = 0; i < states.length; i++) {
+            if (states[i] != expectedState) {
+                fail(txt + expectedState.toString() + " a jest " + states[i].toString());
+            }
+        }
+    }
 
-	@RepeatedTest(10)
-	public void terminationTest() {
-		prepare(10, new PMO_SimpleGenerator(new PointGeneratorInterface.Point2D(1, 1)));
-		tci.start();
-		tci.terminate();
-		getStates();
-		testStates("Po metodzie terminate oczekiwano ", Thread.State.TERMINATED );
-	}
-	
-	@RepeatedTest(10)
-	public void suspensionTest() {
-		prepare(10, new PMO_SimpleGenerator(new PointGeneratorInterface.Point2D(1, 1)));
-		initalStateTest();
-		tci.start();
-		tci.suspend();
-		getStates();
-		testStates("Po metodzie suspend oczekiwano ", Thread.State.WAITING );		
-	}
+    @Test
+    public void initalStateTest() {
+        prepare(4, new PMO_SimpleGenerator(new PointGeneratorInterface.Point2D(1, 1)));
+        getStates();
+        testStates("Po createThreads oczekiwano ", Thread.State.NEW);
+    }
+
+    @RepeatedTest(10)
+    public void terminationTest() {
+        prepare(10, new PMO_SimpleGenerator(new PointGeneratorInterface.Point2D(1, 1)));
+        tci.start();
+        tryToExecute(() -> tci.terminate(), "200", 200);
+        getStates();
+        testStates("Po metodzie terminate oczekiwano ", Thread.State.TERMINATED);
+    }
+
+    @RepeatedTest(10)
+    public void suspensionTest() {
+        prepare(10, new PMO_SimpleGenerator(new PointGeneratorInterface.Point2D(1, 1)));
+        initalStateTest();
+        tci.start();
+        tryToExecute(() -> tci.suspend(), "200", 200);
+        getStates();
+        testStates("Po metodzie suspend oczekiwano ", Thread.State.WAITING);
+    }
 
 }

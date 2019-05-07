@@ -9,6 +9,11 @@ public class PMO_SimpleGenerator implements PointGeneratorInterface {
 		
 	@Override
 	public Point2D getPoint() {
+		try {
+			Thread.sleep(100);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
 		return point;
 	}
 
